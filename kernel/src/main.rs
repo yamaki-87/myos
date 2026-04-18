@@ -1,7 +1,10 @@
 #![no_std]
 #![no_main]
-
+#![feature(abi_x86_interrupt)]
 mod draw_logic;
+mod font;
+mod gdt;
+mod interrupts;
 mod serial;
 mod spinlock;
 use core::panic::PanicInfo;
@@ -9,7 +12,6 @@ use core::panic::PanicInfo;
 use bootloader_api::{BootInfo, entry_point};
 
 use crate::draw_logic::{Color, FrameBufferWriter};
-use core::fmt::Write;
 
 entry_point!(kernel_main);
 
@@ -20,6 +22,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     if let Some(fb) = boot_info.framebuffer.as_mut() {
         serial::serial_write_str("framebuffer exists\n");
         draw_logic::init_writer(boot_info);
+        gdt::init_gdt();
+        interrupts::init_idt();
 
         {
             let mut guard = draw_logic::WRITER.lock();
@@ -32,6 +36,10 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         println!("HELLO");
         println!("KERNEL START");
         println!("BOOT OK");
+        // x86_64::instructions::interrupts::int3();
+        // unsafe {
+        //     core::ptr::write_volatile(0 as *mut u64, 42);
+        // }
     } else {
         serial::serial_write_str("framebuffer none\n");
     }

@@ -5,7 +5,7 @@ use bootloader_api::{
     info::{FrameBufferInfo, PixelFormat},
 };
 
-use crate::spinlock::SpinLock;
+use crate::{font, spinlock::SpinLock};
 
 pub static WRITER: SpinLock<Option<FrameBufferWriter<'static>>> = SpinLock::new(None);
 
@@ -162,11 +162,14 @@ impl<'a> FrameBufferWriter<'a> {
     }
 
     fn draw_char_at(&mut self, x: usize, y: usize, ch: char, fg: Color, bg: Color) {
-        let glyph = glyph_for(ch);
+        let glyph = font::glyph_for(ch);
 
         for (row, bits) in glyph.iter().enumerate() {
             for col in 0..Self::CHAR_WIDTH {
-                let mask = 1 << (7 - col);
+                // This font data is LSB-left:
+                // bit0 = leftmost pixel, bit7 = rightmost pixel.
+                //let mask = 1 << (7 - col);
+                let mask = 1 << col;
                 let color = if (bits & mask) != 0 { fg } else { bg };
                 self.draw_pixel(x + col, y + row, color);
             }
@@ -196,86 +199,5 @@ impl fmt::Write for FrameBufferWriter<'_> {
             self.write_char(ch);
         }
         Ok(())
-    }
-}
-
-const GLYPH_A: [u8; 8] = [
-    0b00011000, 0b00100100, 0b01000010, 0b01111110, 0b01000010, 0b01000010, 0b01000010, 0b00000000,
-];
-
-const GLYPH_UNKNOWN: [u8; 8] = [
-    0b01111110, 0b01000010, 0b00000100, 0b00001000, 0b00010000, 0b00000000, 0b00010000, 0b00000000,
-];
-const GLYPH_SPACE: [u8; 8] = [0; 8];
-const GLYPH_B: [u8; 8] = [
-    0b01111100, 0b01000010, 0b01000010, 0b01111100, 0b01000010, 0b01000010, 0b01111100, 0b00000000,
-];
-
-const GLYPH_E: [u8; 8] = [
-    0b01111110, 0b01000000, 0b01000000, 0b01111100, 0b01000000, 0b01000000, 0b01111110, 0b00000000,
-];
-
-const GLYPH_H: [u8; 8] = [
-    0b01000010, 0b01000010, 0b01000010, 0b01111110, 0b01000010, 0b01000010, 0b01000010, 0b00000000,
-];
-
-const GLYPH_K: [u8; 8] = [
-    0b01000010, 0b01000100, 0b01001000, 0b01110000, 0b01001000, 0b01000100, 0b01000010, 0b00000000,
-];
-
-const GLYPH_L: [u8; 8] = [
-    0b01000000, 0b01000000, 0b01000000, 0b01000000, 0b01000000, 0b01000000, 0b01111110, 0b00000000,
-];
-
-const GLYPH_N: [u8; 8] = [
-    0b01000010, 0b01100010, 0b01010010, 0b01001010, 0b01000110, 0b01000010, 0b01000010, 0b00000000,
-];
-
-const GLYPH_O: [u8; 8] = [
-    0b00111100, 0b01000010, 0b01000010, 0b01000010, 0b01000010, 0b01000010, 0b00111100, 0b00000000,
-];
-
-const GLYPH_R: [u8; 8] = [
-    0b01111100, 0b01000010, 0b01000010, 0b01111100, 0b01001000, 0b01000100, 0b01000010, 0b00000000,
-];
-
-const GLYPH_S: [u8; 8] = [
-    0b00111110, 0b01000000, 0b01000000, 0b00111100, 0b00000010, 0b00000010, 0b01111100, 0b00000000,
-];
-
-const GLYPH_T: [u8; 8] = [
-    0b01111110, 0b00011000, 0b00011000, 0b00011000, 0b00011000, 0b00011000, 0b00011000, 0b00000000,
-];
-
-const GLYPH_0: [u8; 8] = [
-    0b00111100, 0b01000010, 0b01000110, 0b01001010, 0b01010010, 0b01100010, 0b00111100, 0b00000000,
-];
-
-const GLYPH_1: [u8; 8] = [
-    0b00011000, 0b00101000, 0b00001000, 0b00001000, 0b00001000, 0b00001000, 0b00111110, 0b00000000,
-];
-
-const GLYPH_2: [u8; 8] = [
-    0b00111100, 0b01000010, 0b00000010, 0b00001100, 0b00110000, 0b01000000, 0b01111110, 0b00000000,
-];
-
-fn glyph_for(ch: char) -> [u8; 8] {
-    match ch {
-        ' ' => GLYPH_SPACE,
-        'A' => GLYPH_A,
-        'B' => GLYPH_B,
-        'E' => GLYPH_E,
-        'H' => GLYPH_H,
-        'K' => GLYPH_K,
-        'L' => GLYPH_L,
-        'N' => GLYPH_N,
-        'O' => GLYPH_O,
-        'R' => GLYPH_R,
-        'S' => GLYPH_S,
-        'T' => GLYPH_T,
-        '0' => GLYPH_0,
-        '1' => GLYPH_1,
-        '2' => GLYPH_2,
-        _ => GLYPH_UNKNOWN,
     }
 }

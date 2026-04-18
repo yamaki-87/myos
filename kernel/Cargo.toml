@@ -5,6 +5,11 @@ edition = "2024"
 
 [dependencies]
 bootloader_api = "0.11.12"
+x86_64 = "0.15.2"
+
+[dependencies.lazy_static]
+version = "1.5.0"
+features = ["spin_no_std"]
 
 [profile.dev]
 panic = "abort"
