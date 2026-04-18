@@ -5,7 +5,7 @@ use bootloader_api::{
     info::{FrameBufferInfo, PixelFormat},
 };
 
-use crate::{font, spinlock::SpinLock};
+use crate::{font, spinlock::SpinLock, utils::wrapper};
 
 pub static WRITER: SpinLock<Option<FrameBufferWriter<'static>>> = SpinLock::new(None);
 
@@ -24,10 +24,22 @@ pub fn init_writer(boot_info: &'static mut BootInfo) {
 }
 
 pub fn _print(args: fmt::Arguments) {
-    let mut guard = WRITER.lock();
-    if let Some(writer) = guard.as_mut() {
-        writer.write_fmt(args).ok();
-    }
+    wrapper::without_interrupts_fn(|| {
+        let mut guard = WRITER.lock();
+        if let Some(writer) = guard.as_mut() {
+            writer.write_fmt(args).ok();
+        }
+    });
+}
+
+pub fn _clear_screen() {
+    wrapper::without_interrupts_fn(|| {
+        let mut guard = WRITER.lock();
+        if let Some(writer) = guard.as_mut() {
+            let bg = writer.bg;
+            writer.clear(bg);
+        }
+    })
 }
 
 #[macro_export]
@@ -43,6 +55,13 @@ macro_rules! println {
     ($($arg:tt)*) => ({
         $crate::print!("{}\n", format_args!($($arg)*));
     });
+}
+
+#[macro_export]
+macro_rules! clear_screen {
+    () => {
+        $crate::draw_logic::_clear_screen();
+    };
 }
 
 #[derive(Clone, Copy)]

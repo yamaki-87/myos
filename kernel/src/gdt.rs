@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use x86_64::{
     VirtAddr,
     instructions::tables::load_tss,
-    registers::segmentation::{CS, Segment},
+    registers::segmentation::{CS, DS, ES, SS, Segment},
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         tss::TaskStateSegment,
@@ -12,6 +12,7 @@ use x86_64::{
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 struct Selectors {
     code_selector: SegmentSelector,
+    data_selector: SegmentSelector,
     tss_selector: SegmentSelector,
 }
 
@@ -33,12 +34,14 @@ lazy_static! {
         let mut gdt = GlobalDescriptorTable::new();
 
         let code_selector = gdt.append(Descriptor::kernel_code_segment());
+        let data_selector = gdt.append(Descriptor::kernel_data_segment());
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
 
         (
             gdt,
             Selectors {
                 code_selector: code_selector,
+                data_selector: data_selector,
                 tss_selector: tss_selector,
             },
         )
@@ -50,6 +53,9 @@ pub fn init_gdt() {
 
     unsafe {
         CS::set_reg(GDT.1.code_selector);
+        DS::set_reg(GDT.1.data_selector);
+        ES::set_reg(GDT.1.data_selector);
+        SS::set_reg(GDT.1.data_selector);
         load_tss(GDT.1.tss_selector);
     }
 }
