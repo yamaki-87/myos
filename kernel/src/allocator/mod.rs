@@ -6,11 +6,12 @@ use x86_64::{
 };
 
 use crate::{
-    allocator::bump_allocator::BumpAllocator,
+    allocator::{bump_allocator::BumpAllocator, linked_list_allocator::LinkedListAllocator},
     spinlock::{SpinLock, SpinLockGuard},
 };
 
 pub mod bump_allocator;
+pub mod linked_list_allocator;
 pub struct Locked<A> {
     inner: SpinLock<A>,
 }
@@ -59,7 +60,7 @@ pub fn init_heap(
 }
 
 #[global_allocator]
-static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
+static ALLOCATOR: Locked<LinkedListAllocator> = Locked::new(LinkedListAllocator::new());
 
 #[alloc_error_handler]
 fn alloc_error_handler(layout: core::alloc::Layout) -> ! {
