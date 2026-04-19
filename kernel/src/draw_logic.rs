@@ -1,20 +1,12 @@
 use core::fmt::{self, Write};
 
-use bootloader_api::{
-    BootInfo,
-    info::{FrameBufferInfo, PixelFormat},
-};
+use bootloader_api::info::{FrameBuffer, FrameBufferInfo, PixelFormat};
 
 use crate::{font, spinlock::SpinLock, utils::wrapper};
 
 pub static WRITER: SpinLock<Option<FrameBufferWriter<'static>>> = SpinLock::new(None);
 
-pub fn init_writer(boot_info: &'static mut BootInfo) {
-    let framebuffer = boot_info
-        .framebuffer
-        .as_mut()
-        .expect("framebuffer not available");
-
+pub fn init_writer(framebuffer: &'static mut FrameBuffer) {
     let info = framebuffer.info();
     let buffer = framebuffer.buffer_mut();
 
